@@ -1,14 +1,18 @@
-version: '3.8'
+# MySaver Docker Compose — для разработки с hot-reload
+# Запуск: docker compose up -d
+# Остановка: docker compose stop
 
 services:
+  # 🐘 PostgreSQL
   postgres:
+    container_name: mysaver-postgres
     image: postgres:15-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: mysaver
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -16,24 +20,71 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - mysaver-net
 
+  # 🔴 Redis
   redis:
+    container_name: mysaver-redis
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - mysaver-net
 
+  # 📦 rclone RC API
   rclone:
+    container_name: mysaver-rclone
     image: rclone/rclone:latest
     command: rcd --rc-web-gui=false --rc-addr=0.0.0.0:5572 --rc-no-auth
     ports:
-      - "5572:5572"
+      - "${RCLONE_PORT:-5572}:5572"
     volumes:
       - rclone_config:/config/rclone
+    networks:
+      - mysaver-net
+
+  # 🚀 FastAPI приложение (с hot-reload для разработки)
+  api:
+    container_name: mysaver-api
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/mysaver
+      - REDIS_URL=redis://redis:6379/0
+      - RCLONE_RC_ADDR=http://rclone:5572
+      - SECRET_KEY=dev-secret-key-change-in-prod
+    volumes:
+      # Hot-reload: монтируем исходный код
+      - ./app:/app/app
+      - ./requirements.txt:/app/requirements.txt
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rclone:
+        condition: service_started
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    networks:
+      - mysaver-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  mysaver-net:
+    driver: bridge
 
 volumes:
   postgres_data:
