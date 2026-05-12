@@ -1,0 +1,7 @@
+﻿Слой,Технология,Обоснование
+Backend,Python + FastAPI,"Быстрая разработка, "aiohttp", "celery", "asyncpg", удобный subprocess management"
+Frontend,React/Vue + TypeScript + PWA,"Кроссплатформенность, виртуализация списков, оффлайн-кеш UI"
+Queue,Redis + Celery / BullMQ,"Отказоустойчивость, приоритизация, retry/backoff"
+DB,PostgreSQL + Redis,"Транзакции, "ltree" для путей, кеш сессий/метаданных"
+Engine,rclone (v1.65+),"Готовый server-side copy, checksum, chunked upload, rate-limit"
+Deploy,Docker + Docker Compose,"Изоляция, масштабирование, простое обновление"

@@ -1,0 +1,25 @@
+{
+  "task_id": "uuid",
+  "source": {
+    "provider": "google",
+    "path": "/docs/project_alpha",
+    "include": ["*.pdf", "*.docx"],
+    "exclude": ["*.tmp", "drafts/"]
+  },
+  "destination": {
+    "provider": "yandex",
+    "path": "/backups/alpha"
+  },
+  "options": {
+    "conflict_policy": "skip_identical",
+    "verify_mode": "checksum",
+    "skip_preview": false,
+    "tags": ["#alpha", "#docs"],
+    "log_level": "basic"
+  },
+  "metadata": {
+    "created_by": "user_id",
+    "created_at": "ISO8601",
+    "task_hash": "sha256_of_definition"
+  }
+}
