@@ -1,70 +1,58 @@
-"""
-Database configuration and session management
-Async SQLAlchemy 2.0 with PostgreSQL
-"""
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker, AsyncEngine
-from sqlalchemy.pool import NullPool
+# app/db.py
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.orm import sessionmaker
 from app.config import settings
+from contextlib import asynccontextmanager
+
+# === 1. Force Async Driver (Критично для SQLAlchemy 2.0 Async) ===
+# SQLAlchemy требует 'postgresql+asyncpg' для async движков.
+# Мы автоматически преобразуем URL, если он начинается просто с 'postgresql://'.
+DATABASE_URL = settings.DATABASE_URL
+if not DATABASE_URL.startswith("postgresql+asyncpg"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+# === 2. Async Engine ===
+engine = create_async_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    pool_size=10,
+    max_overflow=20,
+    echo=False  # Поставь True, чтобы видеть SQL-запросы в логах
+)
+
+# === 3. Async Session Factory ===
+async_session = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autocommit=False,
+    autoflush=False
+)
+
+# === 4. Sync Session Factory (для Celery/Скриптов) ===
+# Используем синхронный движок, привязанный к async engine
+SyncSessionLocal = sessionmaker(
+    engine.sync_engine,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False
+)
+
+# === 5. Import Base from Models ===
+# Критично: Мы должны использовать тот же Base, что и модели,
+# чтобы init_db мог найти все зарегистрированные таблицы.
 from app.models.base import Base
 
+# === 6. Helper Functions ===
 
-# Async engine for application runtime
-async_engine: AsyncEngine | None = None
-async_session_maker: async_sessionmaker[AsyncSession] | None = None
+def get_db_session():
+    """Возвращает синхронную сессию БД (для Celery/Скриптов)"""
+    return SyncSessionLocal()
 
-
-def get_database_url() -> str:
-    """Get database URL from settings"""
-    return settings.DATABASE_URL
-
-
-def init_db_engine(database_url: str | None = None) -> None:
-    """Initialize async engine and session maker"""
-    global async_engine, async_session_maker
-    
-    if database_url is None:
-        database_url = get_database_url()
-    
-    # Convert postgresql:// to postgresql+asyncpg:// if needed
-    if database_url.startswith("postgresql://"):
-        database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    
-    async_engine = create_async_engine(
-        database_url,
-        pool_pre_ping=True,
-        pool_size=10,
-        max_overflow=20,
-        echo=False,
-    )
-    
-    async_session_maker = async_sessionmaker(
-        async_engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-    )
-
-
-async def init_db() -> None:
-    """Create all tables (for testing only, not for production)"""
-    if async_engine is None:
-        init_db_engine()
-    
-    async with async_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-
-async def close_db() -> None:
-    """Close database connections"""
-    if async_engine:
-        await async_engine.dispose()
-
-
-async def get_db() -> AsyncSession:
-    """Dependency for FastAPI - yields async session"""
-    if async_session_maker is None:
-        init_db_engine()
-    
-    async with async_session_maker() as session:  # type: ignore[arg-type]
+@asynccontextmanager
+async def get_async_db():
+    """Асинхронная сессия (для FastAPI)"""
+    async with async_session() as session:
         try:
             yield session
             await session.commit()
@@ -73,3 +61,14 @@ async def get_db() -> AsyncSession:
             raise
         finally:
             await session.close()
+
+# === 7. Database Initialization ===
+async def init_db():
+    """Создаёт все таблицы на основе зарегистрированных моделей"""
+    async with engine.begin() as conn:
+        # Импортируем модели, чтобы они зарегистрировались в Base
+        import app.models.user
+        import app.models.task
+        import app.models.usage_log
+        import app.models.feature_flag
+        await conn.run_sync(Base.metadata.create_all)
