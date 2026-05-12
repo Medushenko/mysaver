@@ -14,7 +14,7 @@ sys.path.insert(0, str(project_root))
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app.db import init_db_engine, close_db, init_db
+from app.db import init_db_engine, close_db
 from app.models.user import User
 
 
@@ -77,9 +77,6 @@ async def create_test_user() -> None:
 async def main() -> None:
     """Main entry point"""
     try:
-        # Initialize engine and create tables first
-        init_db_engine()
-        await init_db()
         await create_test_user()
     finally:
         await close_db()

@@ -28,12 +28,11 @@ ENV/
 .venv/
 .env/
 
-# Database
-*.sqlite
-*.db
-
-# Alembic
-alembic/versions/*.py
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
 
 # Logs
 *.log
@@ -43,11 +42,17 @@ alembic/versions/*.py
 .env.local
 *.env.*
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+# Coverage
+.coverage
+coverage/
+htmlcov/
+
+# Alembic
+alembic/versions/*.py
+
+# Database
+*.db
+*.db-journal
 
 # OS
 .DS_Store
