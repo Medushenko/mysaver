@@ -1,4 +1,3 @@
-cat > app/config.py << 'EOF'
 """
 Application settings via pydantic-settings
 """
@@ -26,4 +25,3 @@ class Settings(BaseSettings):
 
 # Глобальный экземпляр
 settings = Settings()
-EOF
