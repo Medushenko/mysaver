@@ -1,32 +1,20 @@
+# app/config.py
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    # === Ядро приложения ===
+    # === Ядро приложения (обязательные, типизированные) ===
     PROJECT_NAME: str = "MySaver"
     API_V1_STR: str = "/api/v1"
-    
-    # === База данных ===
     DATABASE_URL: str
-    
-    # === Redis / Celery ===
     REDIS_URL: str
-    
-    # === rclone ===
     RCLONE_RC_ADDR: str
-    
-    # === Безопасность ===
     SECRET_KEY: str = "dev-secret-key-change-in-prod"
     
-    # === Порты (объявлены для доступа через settings.get()) ===
-    API_PORT: int = 8000
-    DB_PORT: int = 5432
-    REDIS_PORT: int = 6379
-    RCLONE_PORT: int = 5572
-    
-    # === Опциональные ===
+    # === Опциональные с дефолтами ===
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = False
     
+    # 🔥 Ключевая настройка: игнорировать неизвестные поля из .env
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -34,14 +22,8 @@ class Settings(BaseSettings):
         extra="ignore"
     )
     
+    # === Удобный доступ к «свободным» переменным ===
     def get(self, key: str, default=None):
-        """Безопасное получение любой переменной"""
-        # Сначала пробуем получить как объявленное поле
-        value = getattr(self, key, None)
-        if value is not None:
-            return value
-        # Потом — из os.environ (если экспортировано в оболочку)
-        import os
-        return os.getenv(key, default)
+        return getattr(self, key, default) or __import__('os').environ.get(key, default)
 
 settings = Settings()

@@ -1,12 +1,13 @@
 # app/db.py
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
 from app.config import settings
 from contextlib import asynccontextmanager
+import logging
 
-# === 1. Force Async Driver (Критично для SQLAlchemy 2.0 Async) ===
-# SQLAlchemy требует 'postgresql+asyncpg' для async движков.
-# Мы автоматически преобразуем URL, если он начинается просто с 'postgresql://'.
+logger = logging.getLogger(__name__)
+
+# === 1. Force Async Driver ===
 DATABASE_URL = settings.DATABASE_URL
 if not DATABASE_URL.startswith("postgresql+asyncpg"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
@@ -17,7 +18,7 @@ engine = create_async_engine(
     pool_pre_ping=True,
     pool_size=10,
     max_overflow=20,
-    echo=False  # Поставь True, чтобы видеть SQL-запросы в логах
+    echo=settings.DEBUG  # Логируем SQL только в режиме отладки
 )
 
 # === 3. Async Session Factory ===
@@ -30,7 +31,6 @@ async_session = async_sessionmaker(
 )
 
 # === 4. Sync Session Factory (для Celery/Скриптов) ===
-# Используем синхронный движок, привязанный к async engine
 SyncSessionLocal = sessionmaker(
     engine.sync_engine,
     autocommit=False,
@@ -39,19 +39,17 @@ SyncSessionLocal = sessionmaker(
 )
 
 # === 5. Import Base from Models ===
-# Критично: Мы должны использовать тот же Base, что и модели,
-# чтобы init_db мог найти все зарегистрированные таблицы.
 from app.models.base import Base
 
 # === 6. Helper Functions ===
 
 def get_db_session():
-    """Возвращает синхронную сессию БД (для Celery/Скриптов)"""
+    """Возвращает синхронную сессию БД (для синхронного кода)"""
     return SyncSessionLocal()
 
 @asynccontextmanager
 async def get_async_db():
-    """Асинхронная сессия (для FastAPI)"""
+    """Асинхронная сессия для FastAPI dependencies"""
     async with async_session() as session:
         try:
             yield session
@@ -64,11 +62,21 @@ async def get_async_db():
 
 # === 7. Database Initialization ===
 async def init_db():
-    """Создаёт все таблицы на основе зарегистрированных моделей"""
-    async with engine.begin() as conn:
-        # Импортируем модели, чтобы они зарегистрировались в Base
-        import app.models.user
-        import app.models.task
-        import app.models.usage_log
-        import app.models.feature_flag
-        await conn.run_sync(Base.metadata.create_all)
+    """Создаёт все таблицы на основе моделей (только для тестов!)"""
+    try:
+        async with engine.begin() as conn:
+            # Импортируем модели, чтобы они зарегистрировались в метаданных
+            import app.models.user
+            import app.models.task
+            import app.models.usage_log
+            import app.models.feature_flag
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Failed to init DB: {e}")
+        raise
+
+async def close_db():
+    """Закрывает все соединения с БД (вызывается при остановке приложения)"""
+    await engine.dispose()
+    logger.info("Database connections closed")
