@@ -2,7 +2,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.config import settings
-from contextlib import asynccontextmanager
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,7 +17,7 @@ engine = create_async_engine(
     pool_pre_ping=True,
     pool_size=10,
     max_overflow=20,
-    echo=settings.DEBUG  # Логируем SQL только в режиме отладки
+    echo=settings.DEBUG
 )
 
 # === 3. Async Session Factory ===
@@ -30,7 +29,7 @@ async_session = async_sessionmaker(
     autoflush=False
 )
 
-# === 4. Sync Session Factory (для Celery/Скриптов) ===
+# === 4. Sync Session Factory (для Celery) ===
 SyncSessionLocal = sessionmaker(
     engine.sync_engine,
     autocommit=False,
@@ -38,18 +37,18 @@ SyncSessionLocal = sessionmaker(
     expire_on_commit=False
 )
 
-# === 5. Import Base from Models ===
+# === 5. Base ===
 from app.models.base import Base
 
-# === 6. Helper Functions ===
+# === 6. Helpers ===
 
 def get_db_session():
-    """Возвращает синхронную сессию БД (для синхронного кода)"""
+    """Синхронная сессия для Celery/скриптов"""
     return SyncSessionLocal()
 
-@asynccontextmanager
+# 🔥 FIX: Простой async generator для FastAPI (БЕЗ @asynccontextmanager!)
 async def get_async_db():
-    """Асинхронная сессия для FastAPI dependencies"""
+    """Асинхронная сессия для FastAPI endpoints"""
     async with async_session() as session:
         try:
             yield session
@@ -60,23 +59,23 @@ async def get_async_db():
         finally:
             await session.close()
 
-# === 7. Database Initialization ===
+# === 7. Init/Close ===
 async def init_db():
-    """Создаёт все таблицы на основе моделей (только для тестов!)"""
+    import asyncio
+    from sqlalchemy import text
     try:
-        async with engine.begin() as conn:
-            # Импортируем модели, чтобы они зарегистрировались в метаданных
-            import app.models.user
-            import app.models.task
-            import app.models.usage_log
-            import app.models.feature_flag
-            await conn.run_sync(Base.metadata.create_all)
-        logger.info("Database tables created successfully")
+        async with asyncio.timeout(5):
+            async with engine.begin() as conn:
+                await conn.execute(text("SELECT 1"))
+                import app.models.user, app.models.task, app.models.usage_log, app.models.feature_flag
+                await conn.run_sync(Base.metadata.create_all)
+        logger.info("✅ Database initialized")
     except Exception as e:
-        logger.error(f"Failed to init DB: {e}")
-        raise
+        if settings.DEBUG:
+            logger.warning(f"⚠️ DB init skipped (dev): {e}")
+        else:
+            raise
 
 async def close_db():
-    """Закрывает все соединения с БД (вызывается при остановке приложения)"""
     await engine.dispose()
-    logger.info("Database connections closed")
+    logger.info("🔌 Database connections closed")

@@ -1,7 +1,8 @@
-"""
-Telegram Bot class for MySaver
-Handles all bot commands and integrates with Celery tasks
-"""
+#"""
+#Telegram Bot class for MySaver
+#Handles all bot commands and integrates with Celery tasks
+#"""
+
 import logging
 from typing import Optional, Dict, Any
 from telegram import Update, Bot

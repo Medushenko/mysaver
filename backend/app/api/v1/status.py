@@ -23,16 +23,17 @@ async def build_status(request: Request):
     except Exception as e:
         print(f"⚠️ Could not read VERSION.txt: {e}")
     
+    # 🔥 Обновлённый чек-лист с итерациями 1.1 и 1.2
     iterations = [
         {"id": "0.1", "name": "БД + модели + миграции", "status": "done"},
-        {"id": "0.2", "name": "StorageAdapter + rclone + Celery", "status": "current"},
-        {"id": "1.1", "name": "Парсер ссылок + превью-дерево", "status": "pending"},
+        {"id": "0.2", "name": "StorageAdapter + rclone + Celery", "status": "done"},
+        {"id": "1.1", "name": "Парсер ссылок + превью-дерево", "status": "done"},
+        {"id": "1.2", "name": "Telegram-бот + отчёты + очистка кеша", "status": "current"},
+        {"id": "2.1", "name": "Frontend (React/Vue) + интерактивное дерево", "status": "pending"},
     ]
     
-    # 🔥 FIX: Правильный вызов TemplateResponse для современных версий Starlette
-    # request — первый позиционный аргумент!
     return templates.TemplateResponse(
-        request,  # ← ПЕРВЫЙ аргумент (обязательно!)
+        request,
         "build_status.html",
         {
             "version": version,
