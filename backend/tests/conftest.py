@@ -1,6 +1,6 @@
 """
 Конфигурация тестов и фикстуры для MySaver.
-Автоматически определяет окружение (SQLite для тестов, PostgreSQL для прода).
+Использует PostgreSQL для тестов (соответствует production окружению).
 """
 import pytest
 import asyncio
@@ -13,13 +13,18 @@ backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.pool import StaticPool
-
-# Используем SQLite для изолированных тестов
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+from app.config import settings
 
 # Настройка pytest-asyncio
 pytest_plugins = ('pytest_asyncio',)
+
+# Используем PostgreSQL для тестов (соответствие production)
+# Переменная TEST_DATABASE_URL должна быть установлена в окружении
+# Пример: postgresql+asyncpg://user:pass@localhost:5432/mysaver_test
+TEST_DATABASE_URL = os.environ.get(
+    "TEST_DATABASE_URL",
+    "postgresql+asyncpg://postgres:postgres@localhost:5432/mysaver_test"
+)
 
 
 @pytest.fixture(scope="session")
@@ -32,15 +37,14 @@ def event_loop_policy():
 async def db_session(event_loop_policy):
     """
     Фикстура для создания чистой БД перед каждым тестом.
-    Использует SQLite в памяти для скорости.
+    Использует PostgreSQL с транзакционным откатом для изоляции.
     """
     from app.models.base import Base
     
     engine = create_async_engine(
         TEST_DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-        echo=False
+        echo=False,
+        pool_pre_ping=True
     )
     
     # Создаем все таблицы
@@ -62,6 +66,10 @@ async def db_session(event_loop_policy):
         yield session
     finally:
         await session.close()
+        # Откатываем все изменения после теста (транзакционная изоляция)
+        from sqlalchemy import text
+        async with engine.begin() as conn:
+            await conn.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public;"))
         await engine.dispose()
 
 @pytest.fixture
