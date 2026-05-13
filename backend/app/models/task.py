@@ -4,9 +4,10 @@ Task model
 import uuid
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
-from sqlalchemy import String, BigInteger, Text, DateTime, ForeignKey, Index, Enum as SQLEnum
+from typing import Optional
+from sqlalchemy import String, BigInteger, Text, DateTime, ForeignKey, Index, Enum as SQLEnum, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy.dialects.postgresql import UUID
 from app.models.base import Base
 
 
@@ -33,9 +34,10 @@ class Task(Base):
         primary_key=True,
         default=uuid.uuid4
     )
-    user_id: Mapped[uuid.UUID] = mapped_column(
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("users.id"),
+        nullable=True,
         index=True
     )
     source_provider: Mapped[str] = mapped_column(String(64))
@@ -48,27 +50,27 @@ class Task(Base):
     )
     bytes_planned: Mapped[int] = mapped_column(BigInteger, default=0)
     bytes_done: Mapped[int] = mapped_column(BigInteger, default=0)
-    error_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
-    options: Mapped[dict] = mapped_column(JSONB, default=dict)
+    error_reason: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    options: Mapped[dict] = mapped_column(JSON, default=dict)
     
     # New fields for parsed links and conflict policy
-    parsed_links: Mapped[list] = mapped_column(JSONB, default=list)
-    conflict_policy: Mapped[ConflictPolicy | None] = mapped_column(
+    parsed_links: Mapped[list] = mapped_column(JSON, default=list)
+    conflict_policy: Mapped[Optional[ConflictPolicy]] = mapped_column(
         SQLEnum(ConflictPolicy),
         nullable=True
     )
-    preview_tree: Mapped[dict] = mapped_column(JSONB, default=dict)
+    preview_tree: Mapped[dict] = mapped_column(JSON, default=dict)
     
-    created_at: Mapped[datetime | None] = mapped_column(
+    created_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
         default=lambda: datetime.now(timezone.utc)
     )
-    started_at: Mapped[datetime | None] = mapped_column(
+    started_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True
     )
-    completed_at: Mapped[datetime | None] = mapped_column(
+    completed_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True),
         nullable=True
     )
@@ -84,7 +86,7 @@ class Task(Base):
         """Return brief status dict for API"""
         return {
             "id": str(self.id),
-            "user_id": str(self.user_id),
+            "user_id": str(self.user_id) if self.user_id else None,
             "status": self.status.value if isinstance(self.status, TaskStatus) else self.status,
             "source": f"{self.source_provider}:{self.source_path}",
             "destination": f"{self.dest_provider}:{self.dest_path}",

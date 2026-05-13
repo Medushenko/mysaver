@@ -2,9 +2,8 @@
 FeatureFlag model
 """
 from datetime import datetime, timezone
-from sqlalchemy import String, Boolean, Text, DateTime
+from sqlalchemy import String, Boolean, Text, DateTime, JSON
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy.dialects.postgresql import JSONB
 from app.models.base import Base
 
 
@@ -16,7 +15,7 @@ class FeatureFlag(Base):
         primary_key=True
     )
     enabled: Mapped[bool] = mapped_column(Boolean, default=False)
-    value: Mapped[dict] = mapped_column(JSONB, default=dict)
+    value: Mapped[dict] = mapped_column(JSON, default=dict)
     description: Mapped[str] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
