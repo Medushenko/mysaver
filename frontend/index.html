@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="MySaver - Intelligent file backup and synchronization tool">
+    <meta name="theme-color" content="#1e293b">
+    <title>MySaver - Smart Backup Solution</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💾</text></svg>">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                        },
+                        dark: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-dark-900 text-dark-100 min-h-screen transition-colors duration-300">
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-dark-900/90 z-50 hidden items-center justify-center">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary-500 mx-auto mb-4"></div>
+            <p class="text-lg font-medium">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+    <!-- Main Layout -->
+    <div class="flex flex-col md:flex-row min-h-screen">
+        <!-- Sidebar Navigation -->
+        <nav id="sidebar" class="md:w-64 bg-dark-800 border-r border-dark-700 p-4 md:min-h-screen">
+            <div class="flex items-center justify-between mb-8">
+                <h1 class="text-2xl font-bold text-primary-400">💾 MySaver</h1>
+                <button id="menu-toggle" class="md:hidden text-dark-400 hover:text-primary-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <ul class="space-y-2">
+                <li>
+                    <button data-page="parser" class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-dark-700 transition-colors flex items-center gap-3 active">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+                        </svg>
+                        <span>Parse Links</span>
+                    </button>
+                </li>
+                <li>
+                    <button data-page="preview" class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-dark-700 transition-colors flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
+                        </svg>
+                        <span>Preview</span>
+                    </button>
+                </li>
+                <li>
+                    <button data-page="conflicts" class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-dark-700 transition-colors flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                        </svg>
+                        <span>Conflicts</span>
+                    </button>
+                </li>
+                <li>
+                    <button data-page="tasks" class="nav-item w-full text-left px-4 py-3 rounded-lg hover:bg-dark-700 transition-colors flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+                        </svg>
+                        <span>Tasks</span>
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="mt-8 pt-8 border-t border-dark-700">
+                <div class="text-xs text-dark-500">
+                    <p>MySaver v1.0.0</p>
+                    <p class="mt-1">© 2024 Medushenko</p>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-1 p-4 md:p-8 overflow-auto">
+            <!-- Parser Page -->
+            <section id="page-parser" class="page active">
+                <h2 class="text-3xl font-bold mb-6">Parse Links</h2>
+                <div class="bg-dark-800 rounded-xl p-6 shadow-lg">
+                    <p class="text-dark-400 mb-4">Paste text containing links to Yandex.Disk, Google Drive, or local paths:</p>
+                    <textarea 
+                        id="parse-input" 
+                        class="w-full h-48 bg-dark-900 border border-dark-700 rounded-lg p-4 text-dark-100 focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                        placeholder="Example:&#10;https://yadi.sk/d/abc123&#10;https://drive.google.com/file/d/xyz789/view&#10;/home/user/documents"
+                    ></textarea>
+                    <div class="mt-4 flex gap-4">
+                        <button id="parse-btn" class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                            Parse Links
+                        </button>
+                        <button id="clear-btn" class="bg-dark-700 hover:bg-dark-600 text-dark-300 px-6 py-3 rounded-lg font-medium transition-colors">
+                            Clear
+                        </button>
+                    </div>
+                    
+                    <!-- Parse Results -->
+                    <div id="parse-results" class="mt-6 hidden">
+                        <h3 class="text-xl font-semibold mb-4">Found Links</h3>
+                        <div id="links-list" class="space-y-2"></div>
+                        <div class="mt-4 flex gap-4">
+                            <button id="proceed-preview-btn" class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                                Proceed to Preview
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Preview Page -->
+            <section id="page-preview" class="page hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold">Preview Tree</h2>
+                    <div class="flex gap-2">
+                        <button id="select-all-btn" class="bg-dark-700 hover:bg-dark-600 text-dark-300 px-4 py-2 rounded-lg text-sm transition-colors">
+                            Select All
+                        </button>
+                        <button id="deselect-all-btn" class="bg-dark-700 hover:bg-dark-600 text-dark-300 px-4 py-2 rounded-lg text-sm transition-colors">
+                            Deselect All
+                        </button>
+                        <button id="files-only-btn" class="bg-dark-700 hover:bg-dark-600 text-dark-300 px-4 py-2 rounded-lg text-sm transition-colors">
+                            Files Only
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="bg-dark-800 rounded-xl p-6 shadow-lg">
+                    <!-- Stats Bar -->
+                    <div id="preview-stats" class="mb-6 p-4 bg-dark-900 rounded-lg flex flex-wrap gap-6">
+                        <div>
+                            <span class="text-dark-500 text-sm">Selected Files:</span>
+                            <span id="selected-files-count" class="ml-2 font-bold text-primary-400">0</span>
+                        </div>
+                        <div>
+                            <span class="text-dark-500 text-sm">Total Size:</span>
+                            <span id="selected-size" class="ml-2 font-bold text-primary-400">0 B</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Tree Container -->
+                    <div id="tree-container" class="max-h-96 overflow-auto bg-dark-900 rounded-lg p-4">
+                        <div id="tree-root" class="space-y-2"></div>
+                    </div>
+                    
+                    <div class="mt-6 flex gap-4">
+                        <button id="create-task-btn" class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                            Create Task
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Conflicts Page -->
+            <section id="page-conflicts" class="page hidden">
+                <h2 class="text-3xl font-bold mb-6">Conflict Resolution</h2>
+                <div class="bg-dark-800 rounded-xl p-6 shadow-lg">
+                    <div class="mb-6">
+                        <label class="block text-dark-400 mb-2">Default Policy for All Conflicts:</label>
+                        <select id="conflict-policy" class="w-full md:w-64 bg-dark-900 border border-dark-700 rounded-lg px-4 py-3 text-dark-100 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                            <option value="skip">Skip (Keep Existing)</option>
+                            <option value="overwrite">Overwrite (Replace)</option>
+                            <option value="keep_both">Keep Both (Duplicate)</option>
+                            <option value="rename">Rename (Auto-rename)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Conflicts Table -->
+                    <div id="conflicts-table-container" class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="border-b border-dark-700">
+                                    <th class="pb-3 pr-4 font-semibold text-dark-400">Source</th>
+                                    <th class="pb-3 pr-4 font-semibold text-dark-400">Destination</th>
+                                    <th class="pb-3 pr-4 font-semibold text-dark-400">Size</th>
+                                    <th class="pb-3 pr-4 font-semibold text-dark-400">Modified</th>
+                                    <th class="pb-3 font-semibold text-dark-400">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="conflicts-body" class="divide-y divide-dark-700">
+                                <!-- Conflicts will be rendered here -->
+                            </tbody>
+                        </table>
+                        <div id="no-conflicts" class="hidden text-center py-8 text-dark-500">
+                            <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <p>No conflicts detected</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6 flex gap-4">
+                        <button id="apply-policy-btn" class="bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                            Apply Policy to All
+                        </button>
+                    </div>
+                    
+                    <!-- Resolution Report -->
+                    <div id="resolution-report" class="mt-6 hidden p-4 bg-dark-900 rounded-lg">
+                        <h3 class="font-semibold mb-2">Resolution Report</h3>
+                        <div id="report-content" class="text-sm text-dark-400"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tasks Page -->
+            <section id="page-tasks" class="page hidden">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold">Active Tasks</h2>
+                    <button id="refresh-tasks-btn" class="bg-dark-700 hover:bg-dark-600 text-dark-300 px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        Refresh
+                    </button>
+                </div>
+                
+                <div id="tasks-list" class="space-y-4">
+                    <!-- Tasks will be rendered here -->
+                    <div id="no-tasks" class="text-center py-12 text-dark-500">
+                        <svg class="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                        <p>No active tasks</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script type="module" src="js/api.js"></script>
+    <script type="module" src="js/parser.js"></script>
+    <script type="module" src="js/tree.js"></script>
+    <script type="module" src="js/conflicts.js"></script>
+    <script type="module" src="js/tasks.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

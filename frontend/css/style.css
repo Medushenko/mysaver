@@ -1,0 +1,288 @@
+/* Custom Styles for MySaver */
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #1e293b;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #475569;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* Tree node animations */
+.tree-node {
+    transition: all 0.2s ease;
+}
+
+.tree-node:hover {
+    transform: translateX(4px);
+}
+
+.tree-children {
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.tree-children.expanded {
+    max-height: 2000px;
+    opacity: 1;
+}
+
+/* Checkbox custom styling */
+input[type="checkbox"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #475569;
+    border-radius: 4px;
+    background: #0f172a;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:checked {
+    background: #3b82f6;
+    border-color: #3b82f6;
+}
+
+input[type="checkbox"]:checked::after {
+    content: '✓';
+    position: absolute;
+    color: white;
+    font-size: 14px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+input[type="checkbox"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #3b82f6;
+}
+
+/* Progress bar animation */
+.progress-bar {
+    transition: width 0.5s ease;
+}
+
+/* Toast notifications */
+.toast {
+    animation: slideIn 0.3s ease forwards;
+    backdrop-filter: blur(8px);
+}
+
+.toast.hiding {
+    animation: slideOut 0.3s ease forwards;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+/* Loading skeleton */
+.skeleton {
+    background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Status badges */
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-running {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-failed {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-cancelled {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    #sidebar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        height: auto;
+        min-height: unset;
+        border-right: none;
+        border-top: 1px solid #334155;
+        z-index: 40;
+        padding: 1rem;
+    }
+
+    #sidebar ul {
+        display: flex;
+        justify-content: space-around;
+    }
+
+    #sidebar ul li {
+        flex: 1;
+    }
+
+    #sidebar ul li button {
+        flex-direction: column;
+        text-align: center;
+        gap: 4px;
+        padding: 0.5rem;
+    }
+
+    #sidebar ul li button span {
+        font-size: 12px;
+    }
+
+    main {
+        padding-bottom: 80px; /* Space for bottom nav */
+    }
+}
+
+/* Focus visible for accessibility */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+}
+
+/* Dark mode specific adjustments */
+.dark select option {
+    background: #0f172a;
+    color: #f1f5f9;
+}
+
+/* Table row hover effect */
+#conflicts-body tr:hover {
+    background: #1e293b;
+}
+
+/* Button disabled state */
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Active navigation item */
+.nav-item.active {
+    background: #1e293b;
+    color: #3b82f6;
+}
+
+/* Page transitions */
+.page {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* File icon colors */
+.file-icon-folder {
+    color: #fbbf24;
+}
+
+.file-icon-file {
+    color: #60a5fa;
+}
+
+/* Conflict action badges */
+.action-skip {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.action-overwrite {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.action-keep_both {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.action-rename {
+    background: #d1fae5;
+    color: #065f46;
+}
