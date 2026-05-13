@@ -12,6 +12,8 @@ from app.db import init_db, close_db
 # === Импорты роутеров ===
 from app.api.v1 import tasks as tasks_router
 from app.api.v1 import status as status_router
+from app.api.v1 import parse as parse_router
+from app.api.v1 import preview as preview_router
 
 
 # === Lifecycle manager для БД ===
@@ -50,6 +52,8 @@ app.add_middleware(
 # === Регистрация роутеров ===
 app.include_router(tasks_router.router, prefix=f"{settings.API_V1_STR}/tasks", tags=["tasks"])
 app.include_router(status_router.router, prefix=f"{settings.API_V1_STR}", tags=["status"])
+app.include_router(parse_router.router, prefix=f"{settings.API_V1_STR}", tags=["parse"])
+app.include_router(preview_router.router, prefix=f"{settings.API_V1_STR}", tags=["preview"])
 
 
 # === Health check ===
