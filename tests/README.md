@@ -21,7 +21,7 @@ tests/
 
 ```bash
 cd /workspace/backend
-pip install pytest pytest-asyncio httpx psycopg2-binary aiosqlite
+pip install pytest pytest-asyncio httpx psycopg2-binary asyncpg
 ```
 
 ### 2. Запуск всех тестов
@@ -29,7 +29,7 @@ pip install pytest pytest-asyncio httpx psycopg2-binary aiosqlite
 ```bash
 # Из корня проекта
 cd /workspace
-pytest tests/ -v
+./tests/run_tests.sh --all
 ```
 
 ### 3. Запуск по категориям
@@ -46,6 +46,28 @@ pytest tests/test_api_integration.py -v
 
 # Только тесты для AI песочницы
 pytest tests/internal_sandbox/ -v
+
+# Тесты базы данных
+pytest tests/test_db_integration.py -v
+```
+
+### 4. Использование скрипта запуска
+
+```bash
+# Все тесты
+./tests/run_tests.sh --all
+
+# Быстрые тесты песочницы
+./tests/run_tests.sh --quick
+
+# Только парсеры
+./tests/run_tests.sh --parsers
+
+# Тесты БД
+./tests/run_tests.sh --db
+
+# Unit тесты (по умолчанию)
+./tests/run_tests.sh
 ```
 
 ### 4. Запуск с фильтрами
@@ -112,15 +134,15 @@ Unit тесты ключевых компонентов:
 
 | Переменная | Описание | Значение по умолчанию |
 |------------|----------|----------------------|
-| `TEST_DATABASE_URL` | URL тестовой БД | `sqlite+aiosqlite:///./test_mysaver.db` |
+| `TEST_DATABASE_URL` | URL тестовой БД | `postgresql+asyncpg://postgres:postgres@localhost:5432/mysaver_test` |
 | `TEST_API_URL` | URL тестового API | `http://localhost:8000` |
 | `CI` | Режим CI/CD | `false` |
 | `AI_SANDBOX` | Режим AI песочницы | `false` |
 
 ### Автоматическое определение среды
 
-- **Локальная разработка (macOS):** SQLite
-- **CI/CD или AI песочница:** PostgreSQL (если указан `TEST_DATABASE_URL`)
+- **Все среды (локальная, CI/CD, AI песочница):** PostgreSQL
+- Для локальной разработки используйте Docker: `docker run -d -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:15`
 
 ## 📊 Формат отчётов об ошибках
 

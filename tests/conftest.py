@@ -1,6 +1,6 @@
 """
 Конфигурация и фикстуры для тестов Pytest.
-Автоматически определяет среду (SQLite для локальной разработки, PostgreSQL для CI).
+Использует только PostgreSQL для всех сред (высоконагруженная система).
 """
 import os
 import sys
@@ -14,7 +14,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'backend'))
 # Пробуем импортировать компоненты БД, но не блокируем тесты если они недоступны
 try:
     from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-    from sqlalchemy.pool import StaticPool
     from app.database.base import Base
     DB_AVAILABLE = True
 except (ImportError, ModuleNotFoundError) as e:
@@ -25,16 +24,18 @@ except (ImportError, ModuleNotFoundError) as e:
 IS_CI = os.getenv('CI', 'false').lower() == 'true'
 IS_SANDBOX = os.getenv('AI_SANDBOX', 'false').lower() == 'true'
 
-# Выбор базы данных
-if IS_CI or IS_SANDBOX:
-    # PostgreSQL для CI/CD или песочницы AI
-    DB_URL = os.getenv(
+# Выбор базы данных - ТОЛЬКО PostgreSQL для всех сред
+TEST_DB_URL = os.getenv(
+    'TEST_DATABASE_URL',
+    'postgresql+asyncpg://postgres:postgres@localhost:5432/mysaver_test'
+)
+
+# Для CI/CD используем отдельную базу
+if IS_CI:
+    TEST_DB_URL = os.getenv(
         'TEST_DATABASE_URL',
-        'postgresql+asyncpg://postgres:postgres@localhost:5432/mysaver_test'
+        'postgresql+asyncpg://postgres:postgres@localhost:5432/mysaver_ci'
     )
-else:
-    # SQLite для локальной разработки (macOS)
-    DB_URL = 'sqlite+aiosqlite:///./test_mysaver.db'
 
 
 @pytest.fixture(scope='session')
@@ -48,15 +49,13 @@ def event_loop() -> Generator:
 @pytest.fixture(scope='session')
 async def engine():
     """Создание движка БД для тестов."""
-    connect_args = {}
-    if DB_URL.startswith('sqlite'):
-        connect_args['check_same_thread'] = False
+    if not DB_AVAILABLE:
+        pytest.skip("База данных недоступна")
     
     engine = create_async_engine(
-        DB_URL,
-        connect_args=connect_args,
-        poolclass=StaticPool if DB_URL.startswith('sqlite') else None,
-        echo=False  # Включить для отладки SQL запросов
+        TEST_DB_URL,
+        echo=False,  # Включить для отладки SQL запросов
+        pool_pre_ping=True  # Проверка соединения перед использованием
     )
     
     # Создание таблиц
@@ -70,12 +69,6 @@ async def engine():
         await conn.run_sync(Base.metadata.drop_all)
     
     await engine.dispose()
-    
-    # Удаление файла SQLite если он существует
-    if DB_URL.startswith('sqlite'):
-        db_file = DB_URL.replace('sqlite+aiosqlite:///', '')
-        if os.path.exists(db_file):
-            os.remove(db_file)
 
 
 @pytest.fixture
@@ -84,13 +77,19 @@ async def db_session(engine) -> AsyncGenerator[AsyncSession, None]:
     session_maker = async_sessionmaker(
         engine, 
         class_=AsyncSession, 
-        expire_on_commit=False
+        expire_on_commit=False,
+        autocommit=False,
+        autoflush=False
     )
     
     session = session_maker()
     
     try:
         yield session
+        await session.commit()
+    except Exception:
+        await session.rollback()
+        raise
     finally:
         await session.close()
 
