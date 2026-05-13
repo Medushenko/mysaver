@@ -12,6 +12,10 @@ from app.db import init_db, close_db
 # === Импорты роутеров ===
 from app.api.v1 import tasks as tasks_router
 from app.api.v1 import status as status_router
+from app.api.v1 import parse as parse_router
+from app.api.v1 import preview as preview_router
+from app.api.v1 import reports as reports_router
+from app.api.v1 import cache as cache_router
 
 
 # === Lifecycle manager для БД ===
@@ -31,7 +35,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Cloud file orchestrator — copy, sync, manage across storages",
-    version="0.2.0",
+    version="0.3.0",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     docs_url="/docs",
     redoc_url="/redoc",
@@ -50,6 +54,10 @@ app.add_middleware(
 # === Регистрация роутеров ===
 app.include_router(tasks_router.router, prefix=f"{settings.API_V1_STR}/tasks", tags=["tasks"])
 app.include_router(status_router.router, prefix=f"{settings.API_V1_STR}", tags=["status"])
+app.include_router(parse_router.router, prefix=f"{settings.API_V1_STR}", tags=["parse"])
+app.include_router(preview_router.router, prefix=f"{settings.API_V1_STR}", tags=["preview"])
+app.include_router(reports_router.router, prefix=f"{settings.API_V1_STR}", tags=["reports"])
+app.include_router(cache_router.router, prefix=f"{settings.API_V1_STR}", tags=["cache"])
 
 
 # === Health check ===

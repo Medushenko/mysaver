@@ -4,7 +4,7 @@ Task model
 import uuid
 from datetime import datetime, timezone
 from enum import Enum as PyEnum
-from sqlalchemy import String, BigInteger, Text, DateTime, ForeignKey, Index
+from sqlalchemy import String, BigInteger, Text, DateTime, ForeignKey, Index, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from app.models.base import Base
@@ -16,6 +16,13 @@ class TaskStatus(str, PyEnum):
     SUCCESS = "success"
     PARTIAL = "partial"
     FAILED = "failed"
+
+
+class ConflictPolicy(str, PyEnum):
+    SKIP = "skip"
+    OVERWRITE = "overwrite"
+    KEEP_BOTH = "keep_both"
+    RENAME = "rename"
 
 
 class Task(Base):
@@ -43,6 +50,14 @@ class Task(Base):
     bytes_done: Mapped[int] = mapped_column(BigInteger, default=0)
     error_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     options: Mapped[dict] = mapped_column(JSONB, default=dict)
+    
+    # New fields for parsed links and conflict policy
+    parsed_links: Mapped[list] = mapped_column(JSONB, default=list)
+    conflict_policy: Mapped[ConflictPolicy | None] = mapped_column(
+        SQLEnum(ConflictPolicy),
+        nullable=True
+    )
+    preview_tree: Mapped[dict] = mapped_column(JSONB, default=dict)
     
     created_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
@@ -79,4 +94,7 @@ class Task(Base):
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "parsed_links": self.parsed_links,
+            "conflict_policy": self.conflict_policy.value if self.conflict_policy else None,
+            "preview_tree": self.preview_tree,
         }
