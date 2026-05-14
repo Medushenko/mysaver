@@ -1,5 +1,5 @@
 # app/schemas/task.py
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field  # 🔥 FIX: Import computed_field
 from datetime import datetime
 from uuid import UUID
 from typing import Optional, Dict, Any
@@ -27,12 +27,19 @@ class TaskResponse(BaseModel):
     """Схема ответа с информацией о задаче"""
     id: UUID
     status: str  # pending, running, success, partial, failed
-    progress_pct: float = Field(default=0.0, ge=0, le=100)
     bytes_planned: Optional[int] = None
     bytes_done: Optional[int] = None
     error_reason: Optional[str] = None
     created_at: datetime
     completed_at: Optional[datetime] = None
+    
+    # 🔥 FIX: Добавлено вычисляемое поле progress_pct
+    @computed_field
+    @property
+    def progress_pct(self) -> float:
+        if not self.bytes_planned:
+            return 0.0
+        return round((self.bytes_done or 0) / self.bytes_planned * 100, 2)
     
     class Config:
         from_attributes = True  # Для работы с SQLAlchemy моделями

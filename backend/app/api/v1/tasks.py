@@ -10,9 +10,10 @@ from app.schemas.task import TaskCreate, TaskResponse
 from app.core.tasks import copy_task  # Наша Celery-задача
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/tasks", tags=["tasks"])
+# 🔥 FIX: Убран префикс из router, так как он указывается в main.py при include_router
+router = APIRouter(tags=["tasks"])
 
-@router.post("", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/tasks", response_model=TaskResponse, status_code=status.HTTP_201_CREATED)
 async def create_task(
     task_data: TaskCreate,
     db: AsyncSession = Depends(get_async_db),
@@ -22,6 +23,9 @@ async def create_task(
     Создать новую задачу копирования файлов.
     Возвращает задачу в статусе 'pending'.
     """
+    # 🔥 FIX: Логирование создания задачи
+    logger.info(f"Creating task: {task_data.source_path} -> {task_data.dest_path}")
+    
     # 1. Создаём запись в БД
     new_task = Task(
         source_provider=task_data.source_provider,
@@ -40,25 +44,26 @@ async def create_task(
     
     # 2. Отправляем задачу в Celery (в фоне)
     # Важно: передаём только сериализуемые данные
-    background_tasks.add_task(
-        copy_task.delay,
-        task_id=str(new_task.id),
-        source={
-            "provider": task_data.source_provider,
-            "path": task_data.source_path
-        },
-        destination={
-            "provider": task_data.dest_provider,
-            "path": task_data.dest_path
-        },
-        options=task_data.options or {}
-    )
+    if background_tasks:
+        background_tasks.add_task(
+            copy_task.delay,
+            task_id=str(new_task.id),
+            source={
+                "provider": task_data.source_provider,
+                "path": task_data.source_path
+            },
+            destination={
+                "provider": task_data.dest_provider,
+                "path": task_data.dest_path
+            },
+            options=task_data.options or {}
+        )
     
     logger.info(f"Task created: {new_task.id} → {task_data.source_path} -> {task_data.dest_path}")
     
     return new_task
 
-@router.get("/{task_id}", response_model=TaskResponse)
+@router.get("/tasks/{task_id}", response_model=TaskResponse)
 async def get_task_status(
     task_id: UUID,
     db: AsyncSession = Depends(get_async_db)
